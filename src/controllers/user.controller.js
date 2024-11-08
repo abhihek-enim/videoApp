@@ -84,9 +84,14 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-  if ([email, password].some((field) => field?.trim() === ""))
-    throw new ApiError(401, "Email/Password can not be empty");
+  console.log(req);
+  const { username, email, password } = req.body;
+
+  console.log(email);
+
+  if (!username && !email) {
+    throw new ApiError(400, "username or email is required");
+  }
   const user = await User.findOne({
     $or: [{ username }, { email }],
   });
@@ -124,6 +129,26 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-const logoutUser = asyncHandler(async (req, res) => {});
+const logoutUser = asyncHandler(async (req, res) => {
+  const user = req.user._id;
+  await User.findByIdAndUpdate(
+    user,
+    {
+      $set: { refreshToken: undefined },
+    },
+    { new: true }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  }; // cookies not editable for client side.
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logout."));
+});
 
 export { registerUser, loginUser, logoutUser };
