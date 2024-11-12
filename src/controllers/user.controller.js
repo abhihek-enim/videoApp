@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessTokenAndRefreshTokens = async (userId) => {
   try {
@@ -85,10 +86,10 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  console.log(req);
+  // console.log(req);
   const { username, email, password } = req.body;
 
-  console.log(email);
+  // console.log(email);
 
   if (!username && !email) {
     throw new ApiError(400, "username or email is required");
@@ -195,6 +196,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
+  console.log("*******************************************************");
+  console.log(oldPassword, newPassword);
+
+  if (!oldPassword && !newPassword) {
+    throw new ApiError(400, "Old/New password are required");
+  }
 
   const user = await User.findById(req.user?._id);
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
@@ -361,26 +368,22 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
         as: "watchHistory",
         pipeline: [
           {
-            from: "users",
-            localField: "owner",
-            foreignField: "_id",
-            as: "owner",
-            pipeline: [
-              {
-                $project: {
-                  username: 1,
-                  avatar: 1,
-                  fullName: 1,
-                },
-              },
-              {
-                $addFields: {
-                  owner: {
-                    $first: "$owner",
-                  },
-                },
-              },
-            ],
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+            },
+          },
+          {
+            $unwind: "$owner",
+          },
+          {
+            $project: {
+              "owner.username": 1,
+              "owner.avatar": 1,
+              "owner.fullName": 1,
+            },
           },
         ],
       },
