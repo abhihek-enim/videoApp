@@ -131,11 +131,11 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-  const user = req.user._id;
+  const user = req.user?._id;
   await User.findByIdAndUpdate(
     user,
     {
-      $set: { refreshToken: undefined },
+      $unset: { refreshToken: 1 }, // this removes the field from the document.
     },
     { new: true }
   );
